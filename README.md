@@ -9,7 +9,14 @@ Install docker and docker-compose
 docker build -t firefox -f Dockerfile.ubuntu.firefox
 docker run --net=host -e DISPLAY=$DISPLAY firefox
 
+docker run -it --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --net=host mfp/chrome
+
 ```
+
+## Usefull commands
+´´´shell
+docker exec -ti CONTAINER sh
+´´´
 
 ## Centos - Firefox
 - [x] Work
