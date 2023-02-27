@@ -15,9 +15,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     \
     rm -rf /var/lib/apt/lists/*
 
-RUN adduser --disabled-password --gecos "" --shell /bin/bash ankush
-RUN usermod -g sudo ankush
-RUN passwd -d ankush
+# RUN adduser --disabled-password --gecos "" --shell /bin/bash ankush
+# RUN usermod -g sudo ankush
+# RUN passwd -d ankush
 
 ENV FF_INSTALLER_NAME=firefox-latest.tar.bz2
 RUN cd /tmp && \
@@ -27,10 +27,10 @@ RUN cd /tmp && \
     chmod +x /tmp && \
     rm -f ${FF_INSTALLER_NAME}
 
-RUN ls -l /tmp/firefox
+# RUN ls -l /tmp/firefox
 
-USER ankush
-CMD /tmp/firefox/firefox
+# USER ankush
+# CMD /tmp/firefox/firefox
 
 # FROM ubuntu
 
@@ -114,3 +114,4 @@ CMD /tmp/firefox/firefox
 
 # CMD ["/usr/bin/firefox"]
 # CMD ["/usr/local/bin/firefox"]
+CMD ["/usr/bash"]
