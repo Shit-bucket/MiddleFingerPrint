@@ -1,10 +1,14 @@
 from __future__ import annotations
 import sys
+from types import TracebackType
 import pytermgui as ptg
 import subprocess
 import os
+import time
  
 from scripts.manage_profiles import create_profile
+from scripts.manage_profiles import get_profiles
+# from scripts.manage_profiles import run_profile
 
 
 OUTPUT = {'action': 'REPEAT'}
@@ -73,6 +77,7 @@ def _configure_widgets() -> None:
 
     ptg.Button.styles.label = "app.button.label"
     ptg.Button.styles.highlight = "app.button.highlight"
+    ptg.Button.set_char("delimiter", [""] * 2)
 
     ptg.Slider.styles.filled__cursor = PALETTE_MID
     ptg.Slider.styles.filled_selected = PALETTE_LIGHT
@@ -106,6 +111,101 @@ def _confirm_exit(manager: ptg.WindowManager) -> None:
     manager.stop()
 
 
+def create_button(caption):
+    return ptg.Button(caption, lambda *_, c=caption: create_profile(c), centered=True)
+
+
+def _run_profile(manager: ptg.WindowManager) -> None:
+
+
+    container = ptg.Container(static_width=50)
+
+    modal = ptg.Window(
+        "[app.title]Select profile",
+        "",
+    ).center()
+    
+    profiles = get_profiles()
+    for caption in profiles:
+        button = create_button(caption)
+        container.lazy_add(button)
+
+    # print(f"{container.get_lines()}")
+    # time.sleep(5)
+    
+    modal.lazy_add(container)
+
+    container_cancel = ptg.Container(
+            ptg.Button("Cancel", lambda *_: modal.close()),
+        )
+
+    modal.lazy_add(container_cancel)
+
+    manager.add(modal)
+
+
+def _generate_profile(manager: ptg.WindowManager) -> None:
+
+    modal = ptg.Window(
+        # "[app.title]Generate Profile",
+        # "",
+        ptg.Container(
+            ptg.InputField("", prompt="Profile Name: "),
+        static_width=80,
+        ),
+        "[app.title]CPU",
+        ptg.Container(
+            ptg.Splitter(
+                ptg.InputField(value="1", prompt="Qty: "),
+                ptg.InputField(value="50000", prompt="Quota: "),
+                "(μs)",
+                ptg.InputField(value="100000", prompt="Period: "),
+                "(μs)",
+            ),
+        ),
+        "[app.title]Memory",
+        ptg.Container(
+            ptg.Splitter(
+                ptg.InputField(value="1", prompt="Memory: "),
+                "(Gb)",
+                ptg.InputField(value="2", prompt="Swap: "),
+                "(Gb)",
+            ),
+        ),
+        "[app.title]Timezone",
+        ptg.Container(
+            ptg.InputField("Etc/Greenwich", prompt="Timezone: "),
+        ),
+        # ptg.Container(
+        #     "",
+        #     ptg.Splitter(
+        #         ptg.Label("  CPU         "), 
+        #         ptg.Toggle(("False", "True")),
+        #     ),
+        #     ptg.Splitter(
+        #         ptg.Label("  GPU         "), 
+        #         ptg.Toggle(("False", "True")),
+        #     ),
+        #     ptg.Splitter(
+        #         ptg.Label("  Memoria     "), 
+        #         ptg.Toggle(("False", "True")),
+        #     ),
+        # static_width=30,
+        # ),
+        "",
+        ptg.Container(
+            ptg.Splitter(
+                ["Build", lambda *_: submit_build(manager, modal)],
+                ptg.Button("Cancel", lambda *_: modal.close()),
+            ),
+        ),
+    ).center().set_title("[app.title]Generate profile")
+
+
+    modal.select(0)
+    manager.add(modal)
+
+
 def _confirm_quit(manager: ptg.WindowManager) -> None:
 
     modal = ptg.Window(
@@ -115,75 +215,14 @@ def _confirm_quit(manager: ptg.WindowManager) -> None:
             ptg.Splitter(
                 # ptg.Button("Yes", lambda *_: manager.stop()),
                 ptg.Button("Yes", lambda *_: _confirm_exit(manager)),
-                ptg.Button("No", lambda *_: modal.close()),
+                ptg.Button("No", lambda *_: modal.close()).set_char("delimiter", [""] * 2),
             ),
         ),
     ).center()
 
-    modal.select(1)
+    modal.select(0)
     manager.add(modal)
 
-
-def _generate_profile(manager: ptg.WindowManager) -> None:
-
-    modal = ptg.Window(
-        "[app.title]Generate Profile",
-        "",
-        ptg.Container(
-            ptg.InputField("", prompt="Profile Name: "),
-        static_width=80,
-        ),
-        ptg.Container(
-            "[app.text]Seleccionar tipo de maquina",
-        ),
-        ptg.Container(
-            ptg.InputField("", prompt="Timezone: "),
-        ),
-        ptg.Container(
-            "",
-            ptg.Splitter(
-                ptg.Label("  CPU         "), 
-                ptg.Toggle(("False", "True")),
-            ),
-            ptg.Splitter(
-                ptg.Label("  GPU         "), 
-                ptg.Toggle(("False", "True")),
-            ),
-            ptg.Splitter(
-                ptg.Label("  Memoria     "), 
-                ptg.Toggle(("False", "True")),
-            ),
-        static_width=30,
-        ),
-        "",
-        ptg.Container(
-            ptg.Splitter(
-                ["Build", lambda *_: submit_build(manager, modal)],
-                ptg.Button("Cancel", lambda *_: modal.close()),
-            ),
-        ),
-    ).center()
-
-    modal.select(1)
-    manager.add(modal)
-
-
-def _run_profile(manager: ptg.WindowManager) -> None:
-    """Creates an "Are you sure you want to quit" modal window"""
-
-    modal = ptg.Window(
-        "[app.title]Are you sure you want to quit?",
-        "",
-        ptg.Container(
-            ptg.Splitter(
-                ptg.Button("Yes", lambda *_: manager.stop()),
-                ptg.Button("No", lambda *_: modal.close()),
-            ),
-        ),
-    ).center()
-
-    modal.select(1)
-    manager.add(modal)
 
 def main() -> None:
     """Runs the application."""
@@ -228,27 +267,40 @@ def main() -> None:
             assign="body",
         )
 
-    ptg.tim.print(f"[{PALETTE_LIGHT}]{OUTPUT}")
-    # ptg.tim.print(f"[{PALETTE_DARK}]{BUILD}")
-    ptg.tim.print(f"[{PALETTE_LIGHT}]Goodbye!")
-
+    # ptg.tim.print(f"[{PALETTE_LIGHT}]{OUTPUT}")
     if (OUTPUT['action'] == 'BUILD'):
+        ptg.tim.print(f"[{PALETTE_LIGHT}]{OUTPUT}")
         profile_name = OUTPUT['1']
-        timezone = OUTPUT['4']
-        CPU = OUTPUT['7']
-        GPU = OUTPUT['9']
-        Memoria = OUTPUT['11']
-        create_profile(profile_name)
+        cpu_qty = OUTPUT['4']
+        cpu_quota = OUTPUT['5']
+        cpu_period = OUTPUT['6']
+        # GPU = OUTPUT['9']
+        mem = OUTPUT['9']
+        swap = OUTPUT['10']
+        tz = OUTPUT['12']
+        create_profile(profile_name, 
+                       cpu_qty=cpu_qty,
+                       cpu_quota=cpu_quota,
+                       cpu_period=cpu_period,
+                       mem=mem,
+                       swap=swap,
+                       tz=tz)
         # os.system('./scripts/build.sh')
-    if (OUTPUT['action'] == 'RUN'):
-        os.system('./sandbox/run.sh')
+    # if (OUTPUT['action'] == 'RUN'):
+    #     os.system('./sandbox/run.sh')
 
 
 if __name__ == "__main__":
     while (OUTPUT['action'] != 'EXIT'):
         main()
 
+    ptg.tim.print(f"")
+    ptg.tim.print(f"")
+    ptg.tim.print(f"[{PALETTE_LIGHT}]Thank for use MiddleFingerprint! [app.header]  ╭ᥥ╮(´• ᴗ •`˵)╭ᥥ╮  ")
+    ptg.tim.print(f"")
 
-# {'action': 'BUILD', '0': 'Container', '1': 'Nombre', '2': 'Container', '3': 'Container', '4': 'Timezone', '5': 
-#   'Container', '6': 'Splitter', '7': True, '8': 'Splitter', '9': False, '10': 'Splitter', '11': True, '12': 'Container', '13': 'Splitter'}
+
+
+# {'action': 'BUILD', '0': 'Container', '1': 'Mimi', '2': 'Container', '3': 'Splitter', '4': '1', '5': '50000', '6': '100000', 
+#  '7': 'Container', '8': 'Splitter', '9': '1', '10': '2', '11': 'Container', '12': 'Etc/Greenwich', '13': 'Container', '14': 'Splitter'}
 
