@@ -1,3 +1,5 @@
 pytermgui
 docker
 coloredlogs
+pytz
+psutil
